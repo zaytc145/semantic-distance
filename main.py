@@ -1,3 +1,4 @@
+from email.policy import default
 import json
 from flask import Flask, render_template
 from flask import request
@@ -7,15 +8,17 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:12345@localhost:3306/semantic'
 db = SQLAlchemy(app)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = "./storage"
 
 
 @app.context_processor
 def utility_processor():
     def manifest(path):
-        f = open('./static/manifest.json')
-        path = json.load(f)[path]['file']
+        f = open('static/manifest.json')
+        data = json.load(f)[path]
         f.close()
-        return path
+        print(data['css'][0])
+        return dict(css_path=data['css'][0], js_path=data['file'])
     return dict(manifest=manifest)
 
 
@@ -31,11 +34,17 @@ class Student(db.Model):
         return f'<Student {self.firstname}>'
 
 
-@app.route("/", methods=['GET'])
-def main():
+@app.route('/api/hello', methods=['GET'])
+def hello():
+    return 'hello'
+
+
+@app.route('/', defaults={'u_path': ''})
+@app.route("/<path:u_path>", methods=['GET'])
+def main(u_path):
     # student_john = Student(firstname='john',
     #                        lastname='doe',
-    #                        email='jd@example.com', 
+    #                        email='jd@example.com',
     #                        age=23,
     #                        bio='Biology student')
 
@@ -47,6 +56,6 @@ def main():
 
 if __name__ == "__main__":
     # db.drop_all()
-    db.create_all()
+    # db.create_all()
     app.debug = True
     app.run()
