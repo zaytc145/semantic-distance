@@ -1,29 +1,22 @@
 <template>
     <div class="main">
-        <div class="main-sidebar">
-            <sidebar />
-        </div>
-        <div class="main-content">
-            <navbar />
-            <div class="container">
-                <router-view />
-            </div>
+        <navbar />
+        <div class="container pt-5">
+            <router-view />
         </div>
     </div>
 </template>
 
 <script>
 import Navbar from "./components/Navbar.vue";
-import Sidebar from "./components/Sidebar.vue";
-import axios from "axios"
 
 export default {
-    components: { Sidebar, Navbar },
+    components: { Navbar },
     data() {
         return {
             num: 0
         };
-    },
+    }
 };
 </script>
 
@@ -34,8 +27,6 @@ export default {
 }
 .main {
     height: 100%;
-    display: flex;
-    flex-wrap: nowrap;
 }
 
 .main-content {

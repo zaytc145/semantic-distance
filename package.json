@@ -17,7 +17,9 @@
   },
   "dependencies": {
     "axios": "^0.21.1",
+    "filepond": "^4.30.3",
     "vue": "^3.2.33",
+    "vue-filepond": "^7.0.3",
     "vue-router": "^4.0.14"
   }
 }

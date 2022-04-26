@@ -1,6 +1,7 @@
 <template>
     <header class="p-3 bg-dark text-white navbar">
         <div class="container">
+                <span class="navbar-brand mb-0 h1">Semantic Distance</span>
             <div
                 class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start"
             >

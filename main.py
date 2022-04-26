@@ -1,15 +1,26 @@
 from email.policy import default
 import json
-from flask import Flask, render_template
-from flask import request
+import redis
+from rq import Queue
+from flask_caching import Cache
 from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, render_template, request
+
+config = {
+    "DEBUG": True,          # some Flask specific configs
+    "CACHE_TYPE": "SimpleCache",  # Flask-Caching related configs
+    "CACHE_DEFAULT_TIMEOUT": 300,
+    "SQLALCHEMY_DATABASE_URI": 'mysql://root:12345@localhost:3306/semantic',
+    'SQLALCHEMY_TRACK_MODIFICATIONS': False,
+    'UPLOAD_FOLDER': "./storage"
+}
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:12345@localhost:3306/semantic'
+app.config.from_mapping(config)
 db = SQLAlchemy(app)
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = "./storage"
-
+cache = Cache(app)
+r = redis.Redis()
+q = Queue(connection=r)
 
 @app.context_processor
 def utility_processor():
@@ -34,7 +45,7 @@ class Student(db.Model):
         return f'<Student {self.firstname}>'
 
 
-@app.route('/api/hello', methods=['GET'])
+@app.route('/api/docs', methods=['post', 'delete'])
 def hello():
     return 'hello'
 
@@ -57,5 +68,4 @@ def main(u_path):
 if __name__ == "__main__":
     # db.drop_all()
     # db.create_all()
-    app.debug = True
     app.run()
