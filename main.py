@@ -1,10 +1,14 @@
-from email.policy import default
 import json
+from statistics import mode
 import redis
 from rq import Queue
 from flask_caching import Cache
-from flask_sqlalchemy import SQLAlchemy
-from flask import Flask, render_template, request
+from flask import Flask, jsonify, render_template, request
+from app.Services.DocumentService import DocumentService
+from app.models import Document, db
+from flask_marshmallow import Marshmallow
+
+from app.Services.OntologyService import OntologyService
 
 config = {
     "DEBUG": True,          # some Flask specific configs
@@ -17,10 +21,15 @@ config = {
 
 app = Flask(__name__)
 app.config.from_mapping(config)
-db = SQLAlchemy(app)
+db.init_app(app)
 cache = Cache(app)
 r = redis.Redis()
 q = Queue(connection=r)
+ma = Marshmallow(app)
+
+class DocumentSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Document
 
 @app.context_processor
 def utility_processor():
@@ -33,39 +42,46 @@ def utility_processor():
     return dict(manifest=manifest)
 
 
-class Student(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    firstname = db.Column(db.String(100), nullable=False)
-    lastname = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(80), unique=True, nullable=False)
-    age = db.Column(db.Integer)
-    bio = db.Column(db.Text)
+@app.route('/api/docs', methods=['get', 'post'])
+def fileUpload():
+    if request.method == 'GET':
+        documents = Document.query.all()
+        documentsSchema = DocumentSchema(many=True)
+        output = documentsSchema.dump(documents)
+        return jsonify({'docs': output})
+    if request.method == 'POST':
+        docService = DocumentService(app.config['UPLOAD_FOLDER'])
+        document = docService.saveFile(request.files['fileuploader'])
+        documentSchema = DocumentSchema()
+        output = documentSchema.dump(document)
+        return dict(document=output)
 
-    def __repr__(self):
-        return f'<Student {self.firstname}>'
 
+@app.route('/api/concepts/compare', methods=['post'])
+def compareConcepts():
+    request_data = request.get_json()
+    ontologySV = OntologyService()
+    label_1 = request_data['label_1']
+    label_2 = request_data['label_2']
 
-@app.route('/api/docs', methods=['post', 'delete'])
-def hello():
-    return 'hello'
+    concept1 = ontologySV.getConcept(label_1)
+    concept2 = ontologySV.getConcept(label_2)
+    sim = ontologySV.dijkstra(concept1, concept2)
+    return {
+        'concept1': concept1,
+        'concept2': concept2,
+        'sim': sim
+    }
 
 
 @app.route('/', defaults={'u_path': ''})
 @app.route("/<path:u_path>", methods=['GET'])
 def main(u_path):
-    # student_john = Student(firstname='john',
-    #                        lastname='doe',
-    #                        email='jd@example.com',
-    #                        age=23,
-    #                        bio='Biology student')
-
-    # db.session.add(student_john)
-    # db.session.commit()
-
     return render_template('index.html')
 
 
 if __name__ == "__main__":
-    # db.drop_all()
-    # db.create_all()
+    # with app.app_context():
+    #     db.drop_all()
+    #     db.create_all()
     app.run()
