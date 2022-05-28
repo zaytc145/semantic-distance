@@ -6,25 +6,7 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-header">Files upload</div>
-                <div class="card-body">
-                    <file-pond
-                        name="fileuploader"
-                        ref="pond"
-                        label-idle="Drop files here..."
-                        :allow-multiple="true"
-                        :instant-upload="false"
-                        accepted-file-types="application/msword, text/plain"
-                        :server="server"
-                        :files="uploaderFiles"
-                    />
-                </div>
-            </div>
-        </div>
-        <div class="col-md-9">
-            <router-view />
+        <div class="col-md-6">
             <div class="card">
                 <div class="card-header">Files list</div>
                 <div class="card-body">
@@ -64,19 +46,19 @@
                 </div>
             </div>
         </div>
+        <div class="col-md-6">
+            <router-view />
+        </div>
     </div>
 </template>
 
 <script>
-import vueFilePond from "vue-filepond";
 import "filepond/dist/filepond.min.css";
 import ConceptsSimilarity from "../components/ConceptsSimilarity.vue";
 import axios from "axios";
-const FilePond = vueFilePond();
 
 export default {
     components: {
-        FilePond,
         ConceptsSimilarity
     },
     data() {
@@ -98,26 +80,11 @@ export default {
             .then(response => {
                 this.isLoading = false;
                 this.files = response.data.docs;
-                this.$nextTick(()=>{
+                this.$nextTick(() => {
                     $("#myTable").DataTable();
-                })
+                });
             });
     },
-    computed: {
-        server() {
-            return {
-                url: import.meta.env.VITE_APP_BASE_URL,
-                process: {
-                    url: "/docs",
-                    onload: response => {
-                        const data = JSON.parse(response);
-                        this.files.push(data.document);
-                        return data.document.id;
-                    }
-                }
-            };
-        }
-    }
 };
 </script>
 

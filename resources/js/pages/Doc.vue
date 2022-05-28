@@ -12,16 +12,30 @@
         <div class="card-body">
             <ul class="list-group mb-3">
                 <li
-                    class="list-group-item d-flex justify-content-between align-items-center"
+                    class="list-group-item d-flex align-items-center"
                 >
-                    <b>Document name:</b>
-                    <h5 class="mb-0">file {{ this.$route.params.id }}</h5>
+                    <h5 class="mb-0">{{ name }}</h5>
                 </li>
                 <li
                     class="list-group-item d-flex justify-content-between align-items-center"
                 >
                     <b>Status:</b>
-                    <span class="badge bg-success">complete</span>
+                    <span class="badge" :class="statusesColors[status]">{{
+                        status
+                    }}</span>
+                </li>
+                <li class="list-group-item d-flex align-items-center flex-wrap">
+                    <b class="me-2">keywords:</b>
+                    <span
+                        class="badge me-2 mb-1"
+                        :class="{
+                            'bg-secondary': !word.fromOntology,
+                            'bg-primary': word.fromOntology
+                        }"
+                        v-for="word in keyWords"
+                        :key="word.id"
+                        >{{ word.name }}</span
+                    >
                 </li>
             </ul>
             <div v-if="status === 'complete'">
@@ -48,11 +62,47 @@
 </template>
 
 <script>
+import axios from "axios";
 export default {
     data() {
         return {
-            status: "complete"
+            isLoading: false,
+            name: "",
+            keyWords: [],
+            status: "",
+            statusesColors: {
+                processing: "bg-warning text-dark",
+                complete: "bg-success",
+                failed: "bg-danger"
+            }
         };
+    },
+    created() {
+        this.fetchData();
+    },
+    watch: {
+        $route: "fetchData"
+    },
+    methods: {
+        fetchData() {
+            this.isLoading = true;
+            axios
+                .get(
+                    import.meta.env.VITE_APP_BASE_URL +
+                        "/docs/" +
+                        this.$route.params.id
+                )
+                .then(response => {
+                    this.isLoading = false;
+                    const { name, status, keyWords } = response.data.doc;
+                    this.name = name;
+                    this.status = status;
+                    this.keyWords = keyWords;
+                })
+                .catch(() => {
+                    this.isLoading = false;
+                });
+        }
     }
 };
 </script>

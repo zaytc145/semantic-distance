@@ -1,19 +1,13 @@
-from importlib.resources import path
-from werkzeug.utils import secure_filename
-import os
-from app.models import Document, db
-
+from numpy import dot
+from numpy.linalg import norm
 
 class DocumentService:
+    def compare(_self_, document1, document2):
+        concept1Path = [keyword.name for keyword in document1.keyWords]
+        concept2Path = [keyword.name for keyword in document2.keyWords]
+        conceptsKeysList = concept1Path + \
+            list(set(concept2Path) - set(concept1Path))
+        v1 = [1 if key in concept1Path else 0 for key in conceptsKeysList]
+        v2 = [1 if key in concept2Path else 0 for key in conceptsKeysList]
 
-    def __init__(self, path):
-        self.path = path
-
-    def saveFile(self, file):
-        filename = secure_filename(file.filename)
-        path = os.path.join(self.path, filename)
-        file.save(path)
-        document = Document(name=filename, path=path)
-        db.session.add(document)
-        db.session.commit()
-        return document
+        return dot(v1, v2)/(norm(v1)*norm(v2))

@@ -4,6 +4,7 @@ import requests
 from numpy import dot
 from numpy.linalg import norm
 import math
+import re
 
 
 class OntologyService:
@@ -19,11 +20,12 @@ class OntologyService:
         query = """
             SELECT DISTINCT ?class ?label ?parent ?parentLabel
             WHERE {{
-                ?class ?predicate {}.
-                OPTIONAL{{?class ?predicate ?label }}.
+                ?class rdfs:label ?label
                 OPTIONAL{{?class rdfs:subClassOf ?parent }}.
-                OPTIONAL{{?parent ?predicate ?parentLabel}}
+                OPTIONAL{{?parent rdfs:label ?parentLabel}}.
+                FILTER (lcase(?label) = "{}"@ru)
             }}""".format(label)
+        
         params['query'] = query
         response = requests.get(url=_self_.ontologyURL, params=params)
         return _self_.getFirst(response.json())
@@ -101,7 +103,6 @@ class OntologyService:
         graph = _self_.getOntologyGraph()
         dist = {}
         queue = []
-        print(graph[concept1['class']])
         for vertex in graph:
             dist[vertex] = math.inf
             queue.append(vertex)
@@ -144,7 +145,7 @@ class OntologyService:
         nodes[concept['class']] = concept
 
         while(parent['parent_label']):
-            parent = _self_.getConcept(parent['parent_label'])
+            parent = _self_.getConcept(re.search('"([^"]*)"', parent['parent_label']))
             nodes[parent['class']] = parent
 
         return nodes
@@ -179,3 +180,34 @@ class OntologyService:
         params['query'] = query
         response = requests.get(url=_self_.ontologyURL, params=params)
         return response.json()
+
+    def getAllChildren(_self_, concept):
+        params = dict(_self_.params)
+        query = """
+            SELECT DISTINCT ?label
+            WHERE {{
+                ?class rdfs:subClassOf <{}>.
+                ?class rdfs:label ?label.
+                FILTER (lang($label) = 'ru')
+            }}
+        """.format(concept)
+        params['query'] = query
+        response = requests.get(url=_self_.ontologyURL, params=params).json()
+        return _self_.getLabels(response)
+
+    def getAllParent(_self_, concept):
+        params = dict(_self_.params)
+        query = """
+            SELECT DISTINCT ?label
+            WHERE {{
+                <{}> rdfs:subClassOf ?parent.
+                ?parent rdfs:label ?label.
+                FILTER (lang($label) = 'ru')
+            }}
+        """.format(concept)
+        params['query'] = query
+        response = requests.get(url=_self_.ontologyURL, params=params).json()
+        return _self_.getLabels(response)
+
+    def getLabels(_self_,arr):
+        return [label['label']['value'] for label in arr['results']['bindings']]

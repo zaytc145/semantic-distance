@@ -66,8 +66,8 @@ import axios from "axios"
 export default {
     data() {
         return {
-            concept1: '"сходимость"@ru',
-            concept2: '"Ряд Фурье"@ru',
+            concept1: 'сходимость',
+            concept2: 'Ряд Фурье',
             results: null
         };
     },
