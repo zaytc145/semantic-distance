@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 import requests
 
-from app.models import Document, KeyWord, db
+from app.models import Document, KeyWord, SimilarityValue, db
 
 
 class JournalService:
@@ -46,3 +46,9 @@ class JournalService:
                     document.keyWords = keyWords
                     db.session.add(document)
                     db.session.commit()
+
+def printLen():
+    sim = SimilarityValue(firstDoc=1,secondDoc=2,value=0.15)
+    db.session.add(sim)
+    db.session.commit()
+    return 'hello'

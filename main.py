@@ -1,15 +1,15 @@
 import json
 from statistics import mode
-import redis
+import time
 from rq import Queue
 from flask_caching import Cache
 from flask import Flask, jsonify, render_template, request
 from app.Services.DocumentService import DocumentService
-from app.Services.JournalService import JournalService
+from app.Services.JournalService import JournalService, printLen
 from app.models import Document, KeyWord, db
 from flask_marshmallow import Marshmallow
-
 from app.Services.OntologyService import OntologyService
+from worker import queue
 
 config = {
     "DEBUG": True,          # some Flask specific configs
@@ -24,10 +24,7 @@ app = Flask(__name__)
 app.config.from_mapping(config)
 db.init_app(app)
 cache = Cache(app)
-r = redis.Redis()
-q = Queue(connection=r)
 ma = Marshmallow(app)
-
 
 class KeyWordSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -50,25 +47,37 @@ def utility_processor():
     return dict(manifest=manifest)
 
 
+@app.route('/api/queue', methods=['get'])
+def test():
+    job = queue.enqueue(printLen)
+    time.sleep(4)
+    print(job.result)
+    return 'ok'
+
+
 @app.route('/api/test', methods=['get'])
 def tst():
+    # 24, 19
     ds = DocumentService()
-    document1 = Document.query.options(db.joinedload(Document.keyWords)).get(25)
+    document1 = Document.query.options(
+        db.joinedload(Document.keyWords)).get(25)
     onS = OntologyService()
-    
+
     newKeywors = []
     for concept in [onS.getConcept(word.name) for word in document1.keyWords]:
-        if concept: 
+        if concept:
             children = onS.getAllChildren(concept['class'])
             parent = onS.getAllParent(concept['class'])
             newKeywors = newKeywors + children + parent
-    
+
     newKeywors = set(newKeywors)
     for word in newKeywors:
-        document1.keyWords.append(KeyWord(name=word.lower(), fromOntology=True))
+        document1.keyWords.append(
+            KeyWord(name=word.lower(), fromOntology=True))
     db.session.add(document1)
     db.session.commit()
     return 'ok'
+
 
 @app.route('/api/docs/<docId>', methods=['get'])
 def getDocument(docId):
