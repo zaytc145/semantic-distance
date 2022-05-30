@@ -6,3 +6,4 @@ __pycache__
 static/js/*
 static/manifest.json
 storage/*
+venv

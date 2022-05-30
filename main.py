@@ -1,15 +1,13 @@
 import json
-from statistics import mode
 import time
 from rq import Queue
-from flask_caching import Cache
 from flask import Flask, jsonify, render_template, request
 from app.Services.DocumentService import DocumentService
-from app.Services.JournalService import JournalService, printLen
+from app.Services.JournalService import JournalService
 from app.models import Document, KeyWord, db
 from flask_marshmallow import Marshmallow
 from app.Services.OntologyService import OntologyService
-from worker import queue
+from worker import queue, printLen
 
 config = {
     "DEBUG": True,          # some Flask specific configs
@@ -23,7 +21,6 @@ config = {
 app = Flask(__name__)
 app.config.from_mapping(config)
 db.init_app(app)
-cache = Cache(app)
 ma = Marshmallow(app)
 
 class KeyWordSchema(ma.SQLAlchemyAutoSchema):
@@ -49,9 +46,7 @@ def utility_processor():
 
 @app.route('/api/queue', methods=['get'])
 def test():
-    job = queue.enqueue(printLen)
-    time.sleep(4)
-    print(job.result)
+    queue.enqueue(printLen, app)
     return 'ok'
 
 
@@ -123,7 +118,7 @@ def compareConcepts():
 def main(u_path):
     return render_template('index.html')
 
-
+# . venv/bin/activate
 if __name__ == "__main__":
     # with app.app_context():
     #     db.drop_all()
