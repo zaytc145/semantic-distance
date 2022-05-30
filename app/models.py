@@ -10,6 +10,8 @@ class Document(db.Model):
     status = db.Column(db.String(100), nullable=False, default='processing')
     # path = db.Column(db.String(100), nullable=False)
     keyWords = db.relationship('KeyWord', lazy=True)
+    similarities = db.relationship(
+        'SimilarityValue', lazy=True, foreign_keys="[SimilarityValue.secondDocId]", order_by="desc(SimilarityValue.value)")
 
 
 class KeyWord(db.Model):
@@ -26,6 +28,8 @@ class KeyWord(db.Model):
 
 class SimilarityValue(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    firstDoc = db.Column(db.Integer, db.ForeignKey('document.id'))
-    secondDoc = db.Column(db.Integer, db.ForeignKey('document.id'))
-    value = db.Column(db.Numeric(3,2))
+    firstDocId = db.Column(db.Integer, db.ForeignKey('document.id'))
+    secondDocId = db.Column(db.Integer, db.ForeignKey('document.id'))
+    value = db.Column(db.Numeric(3, 2))
+
+    firstDoc = db.relationship('Document', lazy=True, foreign_keys=[firstDocId])

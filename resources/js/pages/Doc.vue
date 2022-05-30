@@ -11,9 +11,7 @@
         </div>
         <div class="card-body">
             <ul class="list-group mb-3">
-                <li
-                    class="list-group-item d-flex align-items-center"
-                >
+                <li class="list-group-item d-flex align-items-center">
                     <h5 class="mb-0">{{ name }}</h5>
                 </li>
                 <li
@@ -41,7 +39,7 @@
             <div v-if="status === 'complete'">
                 <h5>Related files:</h5>
                 <div class="table-responsive">
-                    <table class="table">
+                    <table class="table" id="docTable">
                         <thead>
                             <tr>
                                 <th scope="col">File name</th>
@@ -49,9 +47,26 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="num in 3" :key="num">
-                                <td>File {{ num * 2 }}</td>
-                                <td>{{ Math.round(Math.random() * 100) }} %</td>
+                            <tr
+                                v-for="similarity in similarities"
+                                :key="similarity.id"
+                            >
+                                <td>
+                                    <router-link
+                                        :to="{
+                                            name: 'docs.doc',
+                                            params: {
+                                                id: similarity.firstDoc.id
+                                            }
+                                        }"
+                                        >{{
+                                            similarity.firstDoc.name
+                                        }}</router-link
+                                    >
+                                </td>
+                                <td>
+                                    {{ Math.round(similarity.value * 100) }} %
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -69,6 +84,7 @@ export default {
             isLoading: false,
             name: "",
             keyWords: [],
+            similarities: [],
             status: "",
             statusesColors: {
                 processing: "bg-warning text-dark",
@@ -94,10 +110,15 @@ export default {
                 )
                 .then(response => {
                     this.isLoading = false;
-                    const { name, status, keyWords } = response.data.doc;
+                    const { name, status, keyWords, similarities } =
+                        response.data.doc;
                     this.name = name;
                     this.status = status;
                     this.keyWords = keyWords;
+                    this.similarities = similarities;
+                    this.$nextTick(() => {
+                        $("#docTable").DataTable();
+                    });
                 })
                 .catch(() => {
                     this.isLoading = false;

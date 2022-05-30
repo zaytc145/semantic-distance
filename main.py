@@ -4,7 +4,7 @@ from rq import Queue
 from flask import Flask, jsonify, render_template, request
 from app.Services.DocumentService import DocumentService
 from app.Services.JournalService import JournalService
-from app.models import Document, KeyWord, db
+from app.models import Document, KeyWord, SimilarityValue, db
 from flask_marshmallow import Marshmallow
 from app.Services.OntologyService import OntologyService
 from worker import queue, printLen
@@ -27,11 +27,20 @@ class KeyWordSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = KeyWord
 
+class SimpleDocumentSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Document
+    
+class SimilaritySchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = SimilarityValue
+    firstDoc= ma.Nested(SimpleDocumentSchema)
 
 class DocumentSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Document
     keyWords = ma.Nested(KeyWordSchema, many=True)
+    similarities = ma.Nested(SimilaritySchema, many=True)
 
 
 @app.context_processor
@@ -43,34 +52,20 @@ def utility_processor():
         return dict(css_path=data['css'][0], js_path=data['file'])
     return dict(manifest=manifest)
 
-
-@app.route('/api/queue', methods=['get'])
-def test():
-    queue.enqueue(printLen, app)
-    return 'ok'
-
-
-@app.route('/api/test', methods=['get'])
-def tst():
-    # 24, 19
+@app.route('/api/vectors', methods=['get'])
+def vectors():
+    documents = Document.query.options().all()
     ds = DocumentService()
-    document1 = Document.query.options(
-        db.joinedload(Document.keyWords)).get(25)
-    onS = OntologyService()
-
-    newKeywors = []
-    for concept in [onS.getConcept(word.name) for word in document1.keyWords]:
-        if concept:
-            children = onS.getAllChildren(concept['class'])
-            parent = onS.getAllParent(concept['class'])
-            newKeywors = newKeywors + children + parent
-
-    newKeywors = set(newKeywors)
-    for word in newKeywors:
-        document1.keyWords.append(
-            KeyWord(name=word.lower(), fromOntology=True))
-    db.session.add(document1)
-    db.session.commit()
+    for document in documents:
+        for doc in documents:
+            if doc.id != document.id:
+                sim = ds.compare(doc, document)
+                if sim > 0:
+                    simVal = SimilarityValue(firstDoc=doc.id, secondDoc=document.id, value=sim)
+                    db.session.add(simVal)
+        document.status = 'complete'
+        db.session.add(document)
+        db.session.commit()
     return 'ok'
 
 
@@ -118,7 +113,6 @@ def compareConcepts():
 def main(u_path):
     return render_template('index.html')
 
-# . venv/bin/activate
 if __name__ == "__main__":
     # with app.app_context():
     #     db.drop_all()

@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import requests
+from app.Services.OntologyService import OntologyService
 
 from app.models import Document, KeyWord, SimilarityValue, db
 
@@ -24,6 +25,7 @@ class JournalService:
             self.parseArticle(articleLink['href'])
 
     def parseArticle(self, articleLink):
+        ontologyService = OntologyService()
         page = requests.get('https:' + articleLink)
         soup = BeautifulSoup(page.text, "html.parser")
         wrapper = soup.find('ol', class_='breadcrumb')
@@ -42,6 +44,21 @@ class JournalService:
                             keyWords.append(
                                 KeyWord(name=word)
                             )
+
+                    extraKeyWords = []
+                    for concept in [ontologyService.getConcept(word.name) for word in keyWords]:
+                        if concept:
+                            children = ontologyService.getAllChildren(concept['class'])
+                            parent = ontologyService.getAllParent(concept['class'])
+                            extraKeyWords = extraKeyWords + children + parent
+
+                    extraKeyWords = set(extraKeyWords)
+                    for word in extraKeyWords:
+                        keyWords.append(
+                            KeyWord(name=word.lower(), fromOntology=True))
+
                     document.keyWords = keyWords
                     db.session.add(document)
                     db.session.commit()
+                    
+                    
