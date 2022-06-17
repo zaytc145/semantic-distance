@@ -1,4 +1,3 @@
-import queue
 import numpy as np
 import requests
 from numpy import dot

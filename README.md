@@ -12,3 +12,5 @@ $ docker-compose up
 
 $ python 3 worker.py
 $ python 3 main.py
+
+$ celery -A main.celery  worker --loglevel=INFO

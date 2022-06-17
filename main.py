@@ -1,13 +1,11 @@
 import json
-import time
-from rq import Queue
 from flask import Flask, jsonify, render_template, request
 from app.Services.DocumentService import DocumentService
 from app.Services.JournalService import JournalService
 from app.models import Document, KeyWord, SimilarityValue, db
 from flask_marshmallow import Marshmallow
 from app.Services.OntologyService import OntologyService
-from worker import queue, printLen
+from q import make_celery
 
 config = {
     "DEBUG": True,          # some Flask specific configs
@@ -15,26 +13,41 @@ config = {
     "CACHE_DEFAULT_TIMEOUT": 300,
     "SQLALCHEMY_DATABASE_URI": 'mysql://root:12345@localhost:3306/semantic?charset=utf8mb4',
     'SQLALCHEMY_TRACK_MODIFICATIONS': False,
-    'UPLOAD_FOLDER': "storage"
+    'UPLOAD_FOLDER': "storage",
+    'CELERY_CONFIG': {
+        'broker_url': 'redis://:12345@localhost:6379',
+        'result_backend': 'redis://:12345@localhost:6379',
+    }
 }
+
 
 app = Flask(__name__)
 app.config.from_mapping(config)
 db.init_app(app)
 ma = Marshmallow(app)
+celery = make_celery(app)
+
+
+@celery.task
+def add_together(a, b):
+    return a + b
+
 
 class KeyWordSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = KeyWord
 
+
 class SimpleDocumentSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Document
-    
+
+
 class SimilaritySchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = SimilarityValue
-    firstDoc= ma.Nested(SimpleDocumentSchema)
+    firstDoc = ma.Nested(SimpleDocumentSchema)
+
 
 class DocumentSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -52,6 +65,14 @@ def utility_processor():
         return dict(css_path=data['css'][0], js_path=data['file'])
     return dict(manifest=manifest)
 
+
+@app.route('/api/tst', methods=['get'])
+def tst():
+    result = add_together.delay(23, 42)
+    result.wait()
+    return 1
+
+
 @app.route('/api/vectors', methods=['get'])
 def vectors():
     documents = Document.query.options().all()
@@ -61,7 +82,8 @@ def vectors():
             if doc.id != document.id:
                 sim = ds.compare(doc, document)
                 if sim > 0:
-                    simVal = SimilarityValue(firstDoc=doc.id, secondDoc=document.id, value=sim)
+                    simVal = SimilarityValue(
+                        firstDoc=doc.id, secondDoc=document.id, value=sim)
                     db.session.add(simVal)
         document.status = 'complete'
         db.session.add(document)
@@ -112,6 +134,7 @@ def compareConcepts():
 @app.route("/<path:u_path>", methods=['GET'])
 def main(u_path):
     return render_template('index.html')
+
 
 if __name__ == "__main__":
     # with app.app_context():
