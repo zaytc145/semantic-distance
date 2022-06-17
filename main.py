@@ -28,7 +28,7 @@ ma = Marshmallow(app)
 celery = make_celery(app)
 
 
-@celery.task
+@celery.task(name='task.add_together')
 def add_together(a, b):
     return a + b
 
