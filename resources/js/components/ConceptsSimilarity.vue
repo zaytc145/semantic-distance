@@ -73,7 +73,7 @@ export default {
     },
     methods: {
         search() {
-            axios.post('api/concepts/compare',{
+            axios.post('concepts/compare',{
                 label_1: this.concept1,
                 label_2: this.concept2
             }).then(response =>{

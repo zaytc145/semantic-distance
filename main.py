@@ -5,7 +5,7 @@ from app.Services.JournalService import JournalService
 from app.models import Document, KeyWord, SimilarityValue, db
 from flask_marshmallow import Marshmallow
 from app.Services.OntologyService import OntologyService
-from q import make_celery
+from celery_queue import make_celery
 
 config = {
     "DEBUG": True,          # some Flask specific configs
@@ -20,41 +20,34 @@ config = {
     }
 }
 
-
 app = Flask(__name__)
 app.config.from_mapping(config)
 db.init_app(app)
 ma = Marshmallow(app)
 celery = make_celery(app)
 
-
 @celery.task(name='task.add_together')
 def add_together(a, b):
     return a + b
-
 
 class KeyWordSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = KeyWord
 
-
 class SimpleDocumentSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Document
-
 
 class SimilaritySchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = SimilarityValue
     firstDoc = ma.Nested(SimpleDocumentSchema)
 
-
 class DocumentSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Document
     keyWords = ma.Nested(KeyWordSchema, many=True)
     similarities = ma.Nested(SimilaritySchema, many=True)
-
 
 @app.context_processor
 def utility_processor():
@@ -64,14 +57,6 @@ def utility_processor():
         f.close()
         return dict(css_path=data['css'][0], js_path=data['file'])
     return dict(manifest=manifest)
-
-
-@app.route('/api/tst', methods=['get'])
-def tst():
-    result = add_together.delay(23, 42)
-    result.wait()
-    return 1
-
 
 @app.route('/api/vectors', methods=['get'])
 def vectors():
@@ -90,7 +75,6 @@ def vectors():
         db.session.commit()
     return 'ok'
 
-
 @app.route('/api/docs/<docId>', methods=['get'])
 def getDocument(docId):
     document = Document.query.options(
@@ -98,7 +82,6 @@ def getDocument(docId):
     documentSchema = DocumentSchema()
     output = documentSchema.dump(document)
     return jsonify({'doc': output})
-
 
 @app.route('/api/docs', methods=['get'])
 def getDocuments():
@@ -111,7 +94,6 @@ def getDocuments():
     documentsSchema = DocumentSchema(many=True)
     output = documentsSchema.dump(documents)
     return jsonify({'docs': output})
-
 
 @app.route('/api/concepts/compare', methods=['post'])
 def compareConcepts():
@@ -129,12 +111,10 @@ def compareConcepts():
         'sim': sim
     }
 
-
 @app.route('/', defaults={'u_path': ''})
 @app.route("/<path:u_path>", methods=['GET'])
 def main(u_path):
     return render_template('index.html')
-
 
 if __name__ == "__main__":
     # with app.app_context():

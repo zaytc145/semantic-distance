@@ -29,45 +29,6 @@ class OntologyService:
         response = requests.get(url=_self_.ontologyURL, params=params)
         return _self_.getFirst(response.json())
 
-    def conceptsSim(_self_, concept1, concept2):
-        # Wu and Palmer Measure
-        WuPalmerSim = _self_.WuPalmerSim(concept1, concept2)
-        cosSim = _self_.cosSim(concept1, concept2)
-        return {
-            'WuPalmerSim': WuPalmerSim['sim'],
-            'generalConcept': WuPalmerSim['generalConcept'],
-            'cosSim': cosSim
-        }
-
-    def WuPalmerSim(_self_, concept1, concept2):
-        concept1Path = _self_.getConceptPath(concept1)
-        concept2Path = _self_.getConceptPath(concept2)
-
-        N1 = len(concept1Path)-1
-        N2 = len(concept2Path)-1
-
-        generalConcept = _self_.getGeneralConcept(concept1Path, concept2Path)
-
-        if not generalConcept:
-            return dict(sim=0, generalConcept=generalConcept['label'])
-
-        generalConceptPath = _self_.getConceptPath(generalConcept)
-
-        N = len(generalConceptPath)-1
-        sim = 2 * N / (N1 + N2)
-        return dict(sim=sim, generalConcept=generalConcept)
-
-    def cosSim(_self_, concept1, concept2):
-        concept1Path = _self_.getConceptPath(concept1)
-        concept2Path = _self_.getConceptPath(concept2)
-        concept1KL = list(concept1Path.keys())
-        concept2KL = list(concept2Path.keys())
-        conceptsKeysList = concept1KL + list(set(concept2KL) - set(concept1KL))
-        v1 = [1 if key in concept1Path else 0 for key in conceptsKeysList]
-        v2 = [1 if key in concept2Path else 0 for key in conceptsKeysList]
-
-        return dot(v1, v2)/(norm(v1)*norm(v2))
-
     def getOntologyGraph(_self_):
         params = dict(_self_.params)
         query = """    
@@ -128,7 +89,7 @@ class OntologyService:
                 if alt < dist[neighbor]:
                     dist[neighbor] = alt
 
-        return 1 / dist[concept2['class']]
+        return dist[concept2['class']]
 
     def getGeneralConcept(_self_, firstConceptNodes, secondConceptNodes):
         for node in firstConceptNodes:
@@ -169,8 +130,6 @@ class OntologyService:
         if len(bindings) > 0:
             return bindings[0]
         return 0
-
-# SELECT DISTINCT ?v ?obj WHERE { <http://cll.niimm.ksu.ru/ontologies/mathematics#E3125> rdfs:subClassOf ?v . ?v rdfs:label ?obj FILTER (lang(?obj) = 'ru')}
 
     def getParent(_self_, className):
         params = dict(_self_.params)
