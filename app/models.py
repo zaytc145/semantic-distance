@@ -20,12 +20,6 @@ class KeyWord(db.Model):
     documentId = db.Column(db.Integer, db.ForeignKey('document.id'))
     fromOntology = db.Column(db.Boolean, default=False)
 
-# class DocumentKeyWord(db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     keyWordId = db.Column(db.Integer)
-#     documentId = db.Column(db.Integer)
-
-
 class SimilarityValue(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     firstDocId = db.Column(db.Integer, db.ForeignKey('document.id'))

@@ -1,8 +1,11 @@
 <template>
     <h1>Files</h1>
     <div class="row mb-3">
-        <div class="col-md-12">
+        <!-- <div class="col-md-12">
             <concepts-similarity />
+        </div> -->
+        <div class="col-md-12">
+            <document-form @created="addDoc" />
         </div>
     </div>
     <div class="row">
@@ -23,7 +26,8 @@
                                     <router-link
                                         :to="{
                                             name: 'docs.doc',
-                                            params: { id: file.id }
+                                            params: { id: file.id },
+                                            query: { page: $route.query.page }
                                         }"
                                         >{{ file.name }}</router-link
                                     >
@@ -55,11 +59,13 @@
 <script>
 import "filepond/dist/filepond.min.css";
 import ConceptsSimilarity from "../components/ConceptsSimilarity.vue";
+import DocumentForm from "../components/DocumentForm.vue";
 import axios from "axios";
 
 export default {
     components: {
-        ConceptsSimilarity
+        ConceptsSimilarity,
+        DocumentForm
     },
     data() {
         return {
@@ -81,10 +87,30 @@ export default {
                 this.isLoading = false;
                 this.files = response.data.docs;
                 this.$nextTick(() => {
-                    $("#myTable").DataTable();
+                    const table = $("#myTable").DataTable({
+                        order: []
+                    });
+                    const { page } = this.$route.query;
+                    if (page) {
+                        table.page(page - 1).draw("page");
+                    }
+                    $("#myTable").on("page.dt", e => {
+                        console.log(e);
+                        console.log(table.page.info().page);
+                        this.$router.replace({
+                            query: {
+                                page: table.page.info().page + 1
+                            }
+                        });
+                    });
                 });
             });
     },
+    methods: {
+        addDoc(doc) {
+            this.files.push(doc);
+        }
+    }
 };
 </script>
 

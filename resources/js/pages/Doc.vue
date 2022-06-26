@@ -57,7 +57,8 @@
                                             name: 'docs.doc',
                                             params: {
                                                 id: similarity.firstDoc.id
-                                            }
+                                            },
+                                            query: { page: $route.query.page }
                                         }"
                                         >{{
                                             similarity.firstDoc.name
@@ -117,7 +118,9 @@ export default {
                     this.keyWords = keyWords;
                     this.similarities = similarities;
                     this.$nextTick(() => {
-                        $("#docTable").DataTable();
+                        $("#docTable").DataTable({
+                            order: []
+                        });
                     });
                 })
                 .catch(() => {

@@ -45,14 +45,8 @@ class JournalService:
                                 KeyWord(name=word)
                             )
 
-                    extraKeyWords = []
-                    for concept in [ontologyService.getConcept(word.name) for word in keyWords]:
-                        if concept:
-                            children = ontologyService.getAllChildren(concept['class'])
-                            parent = ontologyService.getAllParent(concept['class'])
-                            extraKeyWords = extraKeyWords + children + parent
+                    extraKeyWords = ontologyService.searchKeywords(keyWords)
 
-                    extraKeyWords = set(extraKeyWords)
                     for word in extraKeyWords:
                         keyWords.append(
                             KeyWord(name=word.lower(), fromOntology=True))

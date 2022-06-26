@@ -24,7 +24,7 @@ class OntologyService:
                 OPTIONAL{{?parent rdfs:label ?parentLabel}}.
                 FILTER (lcase(?label) = "{}"@ru)
             }}""".format(label)
-        
+
         params['query'] = query
         response = requests.get(url=_self_.ontologyURL, params=params)
         return _self_.getFirst(response.json())
@@ -105,7 +105,8 @@ class OntologyService:
         nodes[concept['class']] = concept
 
         while(parent['parent_label']):
-            parent = _self_.getConcept(re.search('"([^"]*)"', parent['parent_label']))
+            parent = _self_.getConcept(
+                re.search('"([^"]*)"', parent['parent_label']))
             nodes[parent['class']] = parent
 
         return nodes
@@ -167,5 +168,15 @@ class OntologyService:
         response = requests.get(url=_self_.ontologyURL, params=params).json()
         return _self_.getLabels(response)
 
-    def getLabels(_self_,arr):
+    def searchKeywords(_self_, keywords):
+        extraKeyWords = []
+        for concept in [_self_.getConcept(word.name) for word in keywords]:
+            if concept:
+                children = _self_.getAllChildren(concept['class'])
+                parent = _self_.getAllParent(concept['class'])
+                extraKeyWords = extraKeyWords + children + parent
+
+        return set(extraKeyWords)
+
+    def getLabels(_self_, arr):
         return [label['label']['value'] for label in arr['results']['bindings']]

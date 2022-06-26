@@ -1,4 +1,5 @@
 import json
+from unicodedata import name
 from flask import Flask, jsonify, render_template, request
 from app.Services.DocumentService import DocumentService
 from app.Services.JournalService import JournalService
@@ -26,28 +27,36 @@ db.init_app(app)
 ma = Marshmallow(app)
 celery = make_celery(app)
 
-@celery.task(name='task.add_together')
-def add_together(a, b):
-    return a + b
+
+@celery.task(name='task.handle_doc')
+def handleDoc(docID):
+    docSV = DocumentService()
+    print(docID)
+    docSV.handleDoc(docID)
+
 
 class KeyWordSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = KeyWord
 
+
 class SimpleDocumentSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Document
+
 
 class SimilaritySchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = SimilarityValue
     firstDoc = ma.Nested(SimpleDocumentSchema)
 
+
 class DocumentSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Document
     keyWords = ma.Nested(KeyWordSchema, many=True)
     similarities = ma.Nested(SimilaritySchema, many=True)
+
 
 @app.context_processor
 def utility_processor():
@@ -57,6 +66,7 @@ def utility_processor():
         f.close()
         return dict(css_path=data['css'][0], js_path=data['file'])
     return dict(manifest=manifest)
+
 
 @app.route('/api/vectors', methods=['get'])
 def vectors():
@@ -68,12 +78,13 @@ def vectors():
                 sim = ds.compare(doc, document)
                 if sim > 0:
                     simVal = SimilarityValue(
-                        firstDoc=doc.id, secondDoc=document.id, value=sim)
+                        firstDocId=doc.id, secondDocId=document.id, value=sim)
                     db.session.add(simVal)
         document.status = 'complete'
         db.session.add(document)
         db.session.commit()
     return 'ok'
+
 
 @app.route('/api/docs/<docId>', methods=['get'])
 def getDocument(docId):
@@ -83,17 +94,33 @@ def getDocument(docId):
     output = documentSchema.dump(document)
     return jsonify({'doc': output})
 
-@app.route('/api/docs', methods=['get'])
-def getDocuments():
-    documents = Document.query.options().all()
-    if not len(documents):
-        libSV = JournalService()
-        libSV.parseJournal()
-        documents = Document.query.options().all()
 
-    documentsSchema = DocumentSchema(many=True)
-    output = documentsSchema.dump(documents)
-    return jsonify({'docs': output})
+@app.route('/api/docs', methods=['POST', 'GET'])
+def getDocuments():
+    if request.method == 'GET':
+        documents = Document.query.options().all()
+        if not len(documents):
+            libSV = JournalService()
+            libSV.parseJournal()
+            documents = Document.query.options().all()
+
+        documentsSchema = DocumentSchema(many=True)
+        output = documentsSchema.dump(documents)
+        return jsonify({'docs': output})
+    if request.method == 'POST':
+        request_data = request.get_json()
+        document = Document(name=request_data['name'])
+        keywords = [KeyWord(name=keyword) for keyword in request_data['keywords']]
+        document.keyWords = keywords
+        db.session.add(document)
+        db.session.commit()
+    
+        handleDoc.delay(document.id)
+
+        documentsSchema = DocumentSchema()
+        output = documentsSchema.dump(document)
+        return jsonify({'doc': output})
+
 
 @app.route('/api/concepts/compare', methods=['post'])
 def compareConcepts():
@@ -111,10 +138,12 @@ def compareConcepts():
         'sim': sim
     }
 
+
 @app.route('/', defaults={'u_path': ''})
 @app.route("/<path:u_path>", methods=['GET'])
 def main(u_path):
     return render_template('index.html')
+
 
 if __name__ == "__main__":
     # with app.app_context():
