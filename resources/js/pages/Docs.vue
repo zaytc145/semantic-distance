@@ -4,6 +4,9 @@
         <!-- <div class="col-md-12">
             <concepts-similarity />
         </div> -->
+        <!-- <div class="col-md-12">
+            <compare-results />
+        </div> -->
         <div class="col-md-12">
             <document-form @created="addDoc" />
         </div>
@@ -16,12 +19,16 @@
                     <table class="table" id="myTable" v-if="!isLoading">
                         <thead>
                             <tr>
+                                <th scope="col"></th>
                                 <th scope="col">File name</th>
                                 <th scope="col">Status</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="file in files" :key="file.id">
+                                <td>
+                                    {{ file.id }}
+                                </td>
                                 <td>
                                     <router-link
                                         :to="{
@@ -60,12 +67,14 @@
 import "filepond/dist/filepond.min.css";
 import ConceptsSimilarity from "../components/ConceptsSimilarity.vue";
 import DocumentForm from "../components/DocumentForm.vue";
+import CompareResults from "../components/CompareResults.vue";
 import axios from "axios";
 
 export default {
     components: {
         ConceptsSimilarity,
-        DocumentForm
+        DocumentForm,
+        CompareResults
     },
     data() {
         return {
@@ -75,6 +84,7 @@ export default {
                 complete: "bg-success",
                 failed: "bg-danger"
             },
+            table: null,
             uploaderFiles: [],
             files: []
         };
@@ -87,19 +97,15 @@ export default {
                 this.isLoading = false;
                 this.files = response.data.docs;
                 this.$nextTick(() => {
-                    const table = $("#myTable").DataTable({
-                        order: []
-                    });
+                    this.table = $("#myTable").DataTable();
                     const { page } = this.$route.query;
                     if (page) {
-                        table.page(page - 1).draw("page");
+                        this.table.page(page - 1).draw("page");
                     }
                     $("#myTable").on("page.dt", e => {
-                        console.log(e);
-                        console.log(table.page.info().page);
                         this.$router.replace({
                             query: {
-                                page: table.page.info().page + 1
+                                page: this.table.page.info().page + 1
                             }
                         });
                     });
@@ -108,7 +114,15 @@ export default {
     },
     methods: {
         addDoc(doc) {
+            this.table.destroy();
             this.files.push(doc);
+            this.$nextTick(() => {
+                this.table = $("#myTable").DataTable();
+                const { page } = this.$route.query;
+                if (page) {
+                    this.table.page(page - 1).draw("page");
+                }
+            });
         }
     }
 };

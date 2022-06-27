@@ -118,9 +118,7 @@ export default {
                     this.keyWords = keyWords;
                     this.similarities = similarities;
                     this.$nextTick(() => {
-                        $("#docTable").DataTable({
-                            order: []
-                        });
+                        $("#docTable").DataTable();
                     });
                 })
                 .catch(() => {

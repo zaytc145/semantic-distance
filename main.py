@@ -75,7 +75,7 @@ def vectors():
     for document in documents:
         for doc in documents:
             if doc.id != document.id:
-                sim = ds.compare(doc, document)
+                sim = ds.cosSim(doc, document)
                 if sim > 0:
                     simVal = SimilarityValue(
                         firstDocId=doc.id, secondDocId=document.id, value=sim)
@@ -84,6 +84,52 @@ def vectors():
         db.session.add(document)
         db.session.commit()
     return 'ok'
+
+
+@app.route('/api/comparison', methods=['get'])
+def comparison():
+    ds = DocumentService()
+    documentsSchema = DocumentSchema()
+
+    document = Document.query.options(
+        db.joinedload(Document.keyWords)
+    ).get(6)
+    documents = Document.query.options(db.joinedload(Document.keyWords)).all()
+
+    withConceptsNum = 0
+    withConcepts = []
+    
+    for doc in documents:
+        if doc.id != document.id:
+            sim = ds.cosSim(doc, document)
+            if sim > 0:
+                withConceptsNum += 1
+                withConcepts.append({
+                    'doc':  documentsSchema.dump(doc),
+                    'value': sim
+                })
+
+    noConcepts = []
+    noConceptsNum = 0
+    document.keyWords = [word for word in document.keyWords if word.fromOntology != 1]
+    
+    for doc in documents:
+        if doc.id != document.id:
+            doc.keyWords = [word for word in doc.keyWords if word.fromOntology != 1]
+            sim = ds.cosSim(doc, document)
+            if sim > 0:
+                noConceptsNum += 1
+                noConcepts.append({
+                    'doc':  documentsSchema.dump(doc),
+                    'value': sim
+                })
+                
+    return jsonify({
+        'noConcepts': noConcepts,
+        'withConcepts': withConcepts,
+        'noConceptsNum': noConceptsNum,
+        'withConceptsNum': withConceptsNum
+    })
 
 
 @app.route('/api/docs/<docId>', methods=['get'])
@@ -110,11 +156,12 @@ def getDocuments():
     if request.method == 'POST':
         request_data = request.get_json()
         document = Document(name=request_data['name'])
-        keywords = [KeyWord(name=keyword) for keyword in request_data['keywords']]
+        keywords = [KeyWord(name=keyword)
+                    for keyword in request_data['keywords']]
         document.keyWords = keywords
         db.session.add(document)
         db.session.commit()
-    
+
         handleDoc.delay(document.id)
 
         documentsSchema = DocumentSchema()

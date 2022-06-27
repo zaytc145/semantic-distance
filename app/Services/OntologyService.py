@@ -134,8 +134,11 @@ class OntologyService:
 
     def getParent(_self_, className):
         params = dict(_self_.params)
-        query = 'SELECT DISTINCT ?class WHERE {{ <{}> rdfs:subClassOf ?class }}'.format(
-            className)
+        query = """
+            SELECT DISTINCT ?class 
+            WHERE {{ 
+                <{}> rdfs:subClassOf ?class 
+            }}""".format(className)
         params['query'] = query
         response = requests.get(url=_self_.ontologyURL, params=params)
         return response.json()

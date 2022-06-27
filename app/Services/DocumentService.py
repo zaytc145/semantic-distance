@@ -6,7 +6,7 @@ from app.models import Document, KeyWord, SimilarityValue, db
 
 
 class DocumentService:
-    def compare(_self_, document1, document2):
+    def cosSim(_self_, document1, document2):
         vec1 = [keyword.name for keyword in document1.keyWords]
         vec2 = [keyword.name for keyword in document2.keyWords]
         conceptsKeysList = vec1 + \
@@ -29,7 +29,7 @@ class DocumentService:
 
         for doc in documents:
             if doc.id != document.id:
-                sim = _self_.compare(doc, document)
+                sim = _self_.cosSim(doc, document)
                 if sim > 0:
                     simVal = SimilarityValue(
                         firstDocId=doc.id, secondDocId=document.id, value=sim)

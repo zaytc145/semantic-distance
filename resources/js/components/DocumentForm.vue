@@ -34,8 +34,8 @@ import axios from "axios";
 export default {
     data() {
         return {
-            name: "",
-            keywords: ""
+            name: "Test 1",
+            keywords: "задача оптимального управления, принцип максимума, экстремальные процессы"
         };
     },
     methods: {
